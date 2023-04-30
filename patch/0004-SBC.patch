@@ -1,0 +1,29 @@
+From 794cd416982af70103a7b111fc465ec5dcaa0f3f Mon Sep 17 00:00:00 2001
+From: idavehuwei <idave.hu@gmail.com>
+Date: Sun, 30 Apr 2023 12:13:42 +0800
+Subject: [PATCH 4/4] =?UTF-8?q?=E6=B3=A8=E5=86=8CSBC=E5=AF=86=E7=A0=81?=
+ =?UTF-8?q?=E9=97=AE=E9=A2=98=E4=BF=AE=E6=AD=A3?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ pjsip/src/pjsua-lib/pjsua_acc.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/pjsip/src/pjsua-lib/pjsua_acc.c b/pjsip/src/pjsua-lib/pjsua_acc.c
+index 96af622..54da6c1 100644
+--- a/pjsip/src/pjsua-lib/pjsua_acc.c
++++ b/pjsip/src/pjsua-lib/pjsua_acc.c
+@@ -2699,7 +2699,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
+                                         acc->cfg.reg_delay_before_refresh);
+ 
+     /* Set authentication preference */
+-    pjsip_regc_set_prefs(acc->regc, &acc->cfg.auth_pref);
++    //pjsip_regc_set_prefs(acc->regc, &acc->cfg.auth_pref);
+ 
+     /* Set route-set
+      */
+-- 
+2.39.2 (Apple Git-143)
+

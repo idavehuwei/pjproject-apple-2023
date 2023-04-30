@@ -1,0 +1,174 @@
+From 6cfa59e87bbfb51bd5803d514fa48e9cdd453eae Mon Sep 17 00:00:00 2001
+From: idavehuwei <idave.hu@gmail.com>
+Date: Sun, 30 Apr 2023 12:10:37 +0800
+Subject: [PATCH 3/4] =?UTF-8?q?3pcc=E5=92=8Cdtmf=E9=97=AE=E9=A2=98?=
+ =?UTF-8?q?=E8=A7=A3=E5=86=B3?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ pjsip/src/pjsip-ua/sip_inv.c     |   7 ++
+ pjsip/src/pjsua-lib/pjsua_call.c |   2 +-
+ pjsip/src/pjsua2/endpoint.cpp    | 114 ++++++++++++++++++++++++++++++-
+ 3 files changed, 120 insertions(+), 3 deletions(-)
+
+diff --git a/pjsip/src/pjsip-ua/sip_inv.c b/pjsip/src/pjsip-ua/sip_inv.c
+index 9a71f70..42b3253 100644
+--- a/pjsip/src/pjsip-ua/sip_inv.c
++++ b/pjsip/src/pjsip-ua/sip_inv.c
+@@ -3452,6 +3452,13 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
+             goto on_error;
+         }
+ 
++        PJ_LOG(4, (inv->obj_name, "@@@@@@@: method id %d " , tdata->msg->line.req.method.id));
++	    PJ_LOG(4, (inv->obj_name, "@@@@@@@: role %d ", inv->role == PJSIP_ROLE_UAS));
++	    PJ_LOG(4, (inv->obj_name, "@@@@@@@: state %d ", inv->state == PJSIP_INV_STATE_CONNECTING));
++	    PJ_LOG(4, (inv->obj_name, "@@@@@@@: cause %d ", inv->cause));
++
++
++
+         /* Don't send BYE before ACK is received
+          * https://github.com/pjsip/pjproject/issues/1712
+          */
+diff --git a/pjsip/src/pjsua-lib/pjsua_call.c b/pjsip/src/pjsua-lib/pjsua_call.c
+index ec7325f..97c2bd5 100644
+--- a/pjsip/src/pjsua-lib/pjsua_call.c
++++ b/pjsip/src/pjsua-lib/pjsua_call.c
+@@ -3688,7 +3688,7 @@ PJ_DEF(pj_status_t) pjsua_call_send_dtmf(pjsua_call_id call_id,
+ 
+             pj_ansi_snprintf(body, sizeof(body),
+                              "Signal=%c\r\n"
+-                             "Duration=%d",
++                             "Duration=%d\r\n",
+                              param->digits.ptr[i], param->duration);
+             msg_data_.msg_body = pj_str(body);
+ 
+diff --git a/pjsip/src/pjsua2/endpoint.cpp b/pjsip/src/pjsua2/endpoint.cpp
+index 01d5a83..28ab630 100644
+--- a/pjsip/src/pjsua2/endpoint.cpp
++++ b/pjsip/src/pjsua2/endpoint.cpp
+@@ -1140,8 +1140,118 @@ void Endpoint::on_call_tsx_state(pjsua_call_id call_id,
+ 
+     Call *call = Call::lookup(call_id);
+     if (!call) {
+-        return;
+-    }
++	return;
++    }
++
++
++	const pjsip_method info_method =
++	{
++		PJSIP_OTHER_METHOD,
++		{ "INFO", 4 }
++	};
++
++	const pjsip_method notify_method =
++	{
++		PJSIP_OTHER_METHOD,
++		{ "NOTIFY", 4 }
++	};
++
++ 
++
++	if (tsx->role == PJSIP_ROLE_UAS && tsx->state == PJSIP_TSX_STATE_TRYING)
++	{
++		pjsip_rx_data* rdata;
++		pjsip_tx_data* tdata;
++		pj_status_t status;
++		pjsua_call_info call_info;
++
++		pjsua_call_get_info(call_id, &call_info);
++
++		rdata = e->body.tsx_state.src.rdata;
++
++		/* Answer incoming INFO with 200/OK */
++
++		if (strstr(pj_strbuf(&rdata->msg_info.msg->line.req.method.name),
++			"NOTIFY"))
++		{
++			if (strstr(rdata->pkt_info.packet, "Event: talk") != 0)
++			{
++				status = pjsip_endpt_create_response(tsx->endpt, rdata,
++					200, NULL, &tdata);
++				if (status == PJ_SUCCESS)
++					status = pjsip_tsx_send_msg(tsx, tdata);
++
++				PJ_LOG(3, (THIS_FILE, "@@@@@@@@@PJSUA2 - Call Id%d:  current media status %d ", call_id, call_info.media_status));
++
++				if (call_info.media_status == PJSUA_CALL_MEDIA_LOCAL_HOLD)
++				{
++					PJ_LOG(3, (THIS_FILE, "PJSUA2 - Call Id%d:  current is hold1, now retrieve call", call_id));
++					pjsua_call_reinvite(call_id, PJSUA_CALL_UNHOLD, NULL);
++				}
++
++				else if (call_info.media_status == PJSUA_CALL_MEDIA_NONE && call_info.media[0].status == PJSUA_CALL_MEDIA_LOCAL_HOLD)
++				{
++					PJ_LOG(3, (THIS_FILE, "PJSUA2 - Call Id%d:  current is hold2, now retrieve call", call_id));
++					pjsua_call_reinvite(call_id, PJSUA_CALL_UNHOLD, NULL);
++
++				}
++
++				else
++				{
++	 
++					pjsua_call_setting call_setting;
++					pjsua_call_setting_default(&call_setting);
++					 
++					pjsua_call_info call_info;
++					pjsua_call_get_info(call_id, &call_info);
++
++					call_setting.vid_cnt = call_info.rem_vid_cnt;
++
++					if (call_setting.vid_cnt > 0)
++					{
++	 
++					}
++
++					call_setting.flag = 0;
++					pjsua_call_answer2(call_id, &call_setting, 200, NULL, NULL);
++
++
++				}
++
++				PJ_LOG(3, (THIS_FILE, "PJSUA2 - Call Id%d: status:%d", call_id, call_info.media_status));
++			}
++			else if (strstr(rdata->pkt_info.packet, "Event: hold") != 0)
++			{
++				status = pjsip_endpt_create_response(tsx->endpt, rdata,
++					200, NULL, &tdata);
++				if (status == PJ_SUCCESS)
++					status = pjsip_tsx_send_msg(tsx, tdata);
++
++				pjsua_call_set_hold(call_id, NULL);
++
++				PJ_LOG(3, (THIS_FILE, "PJSUA2 - Hold Call %d:",
++					call_id));
++			}
++			else if (strstr(rdata->pkt_info.packet, "Event: refer") != 0)
++			{
++				status = pjsip_endpt_create_response(tsx->endpt, rdata,
++					200, NULL, &tdata);
++				if (status == PJ_SUCCESS)
++					status = pjsip_tsx_send_msg(tsx, tdata);
++
++				PJ_LOG(3, (THIS_FILE, "PJSUA2 - Refer Call %d:",
++					call_id));
++			}
++			else
++			{
++				status = pjsip_endpt_create_response(tsx->endpt, rdata,
++					500, NULL, &tdata);
++				if (status == PJ_SUCCESS)
++					status = pjsip_tsx_send_msg(tsx, tdata);
++			}
++		}
++	}
++ 
+     
+     OnCallTsxStateParam prm;
+     prm.e.fromPj(*e);
+-- 
+2.39.2 (Apple Git-143)
+

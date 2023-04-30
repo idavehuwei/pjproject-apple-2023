@@ -1,0 +1,7 @@
+clean.sh
+build
+install.sh
+.DS_Store
+.install.sh
+SDL
+third_party_bin

@@ -1,0 +1,29 @@
+From 63cbd69397d0589f0b07c1d23dc6392a86a98b49 Mon Sep 17 00:00:00 2001
+From: idavehuwei <idave.hu@gmail.com>
+Date: Sun, 30 Apr 2023 11:48:33 +0800
+Subject: [PATCH 2/4] =?UTF-8?q?=E4=B8=8D=E6=A3=80=E6=B5=8B=E8=BF=9C?=
+ =?UTF-8?q?=E7=A8=8B=E7=9A=84update=E6=8C=87=E4=BB=A4?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ pjsip/src/pjsua-lib/pjsua_call.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/pjsip/src/pjsua-lib/pjsua_call.c b/pjsip/src/pjsua-lib/pjsua_call.c
+index ea52e8e..ec7325f 100644
+--- a/pjsip/src/pjsua-lib/pjsua_call.c
++++ b/pjsip/src/pjsua-lib/pjsua_call.c
+@@ -4200,6 +4200,8 @@ static pj_status_t process_pending_reinvite(pjsua_call *call)
+                                               &ST_UPDATE) ==
+                                                 PJSIP_DIALOG_CAP_SUPPORTED;
+ 
++    rem_can_update = PJ_FALSE;
++    
+     /* Logging stuff */
+     {
+         const char *ST_ICE_UPDATE = "ICE transport address after "
+-- 
+2.39.2 (Apple Git-143)
+

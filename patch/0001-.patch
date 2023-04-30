@@ -1,0 +1,90 @@
+From 24f6a7f9223f02bf788c37914eab66dbd8803802 Mon Sep 17 00:00:00 2001
+From: idavehuwei <idave.hu@gmail.com>
+Date: Sun, 30 Apr 2023 11:46:30 +0800
+Subject: [PATCH 1/4] =?UTF-8?q?=E6=B3=A8=E9=87=8A?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ pjsip/src/pjsua-lib/pjsua_acc.c  | 1 +
+ pjsip/src/pjsua-lib/pjsua_call.c | 2 ++
+ pjsip/src/pjsua2/call.cpp        | 4 +++-
+ pjsip/src/pjsua2/endpoint.cpp    | 2 ++
+ 4 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/pjsip/src/pjsua-lib/pjsua_acc.c b/pjsip/src/pjsua-lib/pjsua_acc.c
+index 9982b03..96af622 100644
+--- a/pjsip/src/pjsua-lib/pjsua_acc.c
++++ b/pjsip/src/pjsua-lib/pjsua_acc.c
+@@ -4018,6 +4018,7 @@ static void schedule_reregistration(pjsua_acc *acc)
+ 
+         for (i = 0, cnt = 0; i < pjsua_var.ua_cfg.max_calls; ++i) {
+             if (pjsua_var.calls[i].acc_id == acc->index) {
++                PJ_LOG(4, (THIS_FILE, "disconnect calls of this account after the first reregistration attempt failed. i: %d", i));
+                 pjsua_call_hangup(i, 0, NULL, NULL);
+                 ++cnt;
+             }
+diff --git a/pjsip/src/pjsua-lib/pjsua_call.c b/pjsip/src/pjsua-lib/pjsua_call.c
+index 1faf16e..ea52e8e 100644
+--- a/pjsip/src/pjsua-lib/pjsua_call.c
++++ b/pjsip/src/pjsua-lib/pjsua_call.c
+@@ -2105,11 +2105,13 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
+              * so let's process the answer/hangup now.
+              */
+             if (call->async_call.call_var.inc_call.hangup) {
++                PJ_LOG(4, (THIS_FILE, "call->async_call.call_var.inc_call.hangup ==true call_id %d", call_id));
+                 process_pending_call_hangup(call);
+             } else if (call->med_ch_cb == NULL && call->inv) {
+                 process_pending_call_answer(call);
+             }
+         } else {
++            PJ_LOG(4, (THIS_FILE, "pjsua_var.ua_cfg.cb.on_incoming_call ==false call_id %d", call_id));
+             pjsua_call_hangup(call_id, PJSIP_SC_TEMPORARILY_UNAVAILABLE,
+                               NULL, NULL);
+         }
+diff --git a/pjsip/src/pjsua2/call.cpp b/pjsip/src/pjsua2/call.cpp
+index 489a443..04113ce 100644
+--- a/pjsip/src/pjsua2/call.cpp
++++ b/pjsip/src/pjsua2/call.cpp
+@@ -477,6 +477,7 @@ Call::~Call()
+      */
+     if (pjsua_get_state() < PJSUA_STATE_CLOSING && isActive()) {
+         try {
++            PJ_LOG(4, (THIS_FILE, "If this instance is deleted, also hangup the corresponding call in PJSUA library."));
+             CallOpParam prm;
+             hangup(prm);
+         } catch (Error &err) {
+@@ -722,7 +723,8 @@ void Call::answer(const CallOpParam &prm) PJSUA2_THROW(Error)
+ void Call::hangup(const CallOpParam &prm) PJSUA2_THROW(Error)
+ {
+     call_param param(prm.txOption, prm.opt, prm.reason);
+-    
++    PJ_LOG(4, (THIS_FILE, "Call::hangup method: call_id: %d", id));
++
+     PJSUA2_CHECK_EXPR( pjsua_call_hangup(id, prm.statusCode, param.p_reason,
+                                          param.p_msg_data) );
+ }
+diff --git a/pjsip/src/pjsua2/endpoint.cpp b/pjsip/src/pjsua2/endpoint.cpp
+index d054de8..01d5a83 100644
+--- a/pjsip/src/pjsua2/endpoint.cpp
++++ b/pjsip/src/pjsua2/endpoint.cpp
+@@ -837,6 +837,7 @@ void Endpoint::on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
+ {
+     Account *acc = lookupAcc(acc_id, "on_incoming_call()");
+     if (!acc) {
++        PJ_LOG(4, (THIS_FILE, "on_incoming_call  acc is false. i: %s", acc->id));
+         pjsua_call_hangup(call_id, PJSIP_SC_INTERNAL_SERVER_ERROR, NULL, NULL);
+         return;
+     }
+@@ -868,6 +869,7 @@ void Endpoint::on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
+     if (!pjsua_call_get_user_data(call_id) &&
+         ci.state != PJSIP_INV_STATE_DISCONNECTED)
+     {
++        PJ_LOG(4, (THIS_FILE, "disconnect if callback doesn't handle the call. call_id: %d", call_id));
+         pjsua_call_hangup(call_id, PJSIP_SC_INTERNAL_SERVER_ERROR, NULL, NULL);
+     }
+ }
+-- 
+2.39.2 (Apple Git-143)
+
